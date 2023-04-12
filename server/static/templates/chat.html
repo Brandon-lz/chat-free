@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>聊天机器人-GPTChat</title>
+</head>
+<style>
+    .message_box {
+        position: relative;
+        width: 800px;
+        margin: 0 auto;
+        overflow: hidden;
+        display: flex;
+        flex-flow: column;
+    }
+
+    .name_box {
+        font-size: 14px;
+        color: #000000;
+        font-weight: bold;
+        padding: 10px;
+        background-color: #F6F6F7;
+    }
+
+    .info_box {
+        position: relative;
+    }
+
+    .info_left {
+        display: block;
+        padding: 5px;
+        background-color: #d5d5d5;
+        color: #0b0b0b;
+        max-width: 300px;
+        word-wrap: break-word;
+        word-break: break-all;
+        border-radius: 5px;
+        float: left;
+        clear: both;
+        position: relative;
+        left: 30px;
+        margin: 5px 0;
+    }
+
+    .info_right {
+        padding: 5px;
+        background-color: #C9E7FF;
+        color: #0b0b0b;
+        max-width: 300px;
+        word-wrap: break-word;
+        word-break: break-all;
+        border-radius: 5px;
+        margin: 5px 0;
+        text-align: left;
+        float: right;
+        clear: both;
+        position: relative;
+        right: 30px;
+    }
+
+    .send_box {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        padding: 10px;
+        background: rgb(233, 231, 231);
+    }
+
+    .send_box button {
+        flex: 0 0 60px;
+        width: 100px;
+        height: 36px;
+        border-radius: 4px;
+        background: #22b922;
+        border: solid 1px #8c939d;
+        margin-left: 10px;
+        color: #ffffff;
+    }
+
+    .send_box input {
+        width: 500px;
+        height: 36px;
+        border-radius: 4px;
+        margin-left: 10px;
+        border: solid 1px #8c939d;
+        color: #000000;
+        font-size: 16px;
+    }
+
+    .time_box {
+        font-size: 12px;
+        margin-bottom: 5px
+    }
+
+    .ul_box {
+        list-style: none;
+        overflow: auto;
+        padding-inline-start: 0;
+        height: calc(100% - 120px);
+        flex: 1;
+        margin-bottom: 60px;
+    }
+</style>
+
+<body>
+    <div class="message_box" id="messageBox">
+        <div class="name_box">
+            Root：<span id="output"></span>
+        </div>
+        <ul class="ul_box" id="infoBox">
+            <!--            <li style="text-align: left">-->
+            <!--                <span class="info_left">-->
+            <!--                    左-->
+            <!--                </span>-->
+            <!--            </li>-->
+            <!--            <li style="text-align: right;position:relative">-->
+            <!--                <span class="info_right">-->
+            <!--                    右-->
+            <!--                </span>-->
+            <!--            </li>-->
+        </ul>
+        <div class="send_box">
+            <input type="text" id="message">
+            <button onclick="sendMessage()">发送</button>
+            <button onclick="closeConnection()" style="position: absolute;right: 50px">关闭连接</button>
+        </div>
+
+    </div>
+    <script>
+        var host = "127.0.0.1:8091"
+        var name = 'liule'
+        var post_json = null
+        var success = false
+        var socket = null
+
+        const request = new XMLHttpRequest();
+        request.open('POST', 'http://' + host + '/token');
+        request.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
+        var rqs_body = { 'name': name }
+        request.send(JSON.stringify(rqs_body));
+        // request.send();
+
+        request.onreadystatechange = function () {
+            if (request.readyState == 4 && request.status >= 200) {
+                // Success!
+                post_json = JSON.parse(request.responseText);
+                chat(post_json)
+            } else {
+                console.log('请求失败')
+                // We reached our target server, but it returned an error
+            }
+        };
+        function chat(post_json) {
+            // 创建 WebSocket 连接
+            console.log('11111111111')
+            var token_str = post_json.token
+            socket = new WebSocket("ws://" + host + "/chat?token=" + token_str);
+
+            // 打开连接时触发事件
+            socket.onopen = function (event) {
+                console.log("WebSocket 连接已打开");
+                document.getElementById("output").innerHTML += "" + "聊天机器人已连接!" + "<br>";
+            };
+
+            // 接收到消息时触发事件
+            socket.onmessage = function (event) {
+                console.log('event=', event)
+                console.log("收到服务端消息：", event.data);
+                // document.getElementById("infoBox").lastElementChild.innerHTML+=`<li style="text-align: left">
+                // <span class="info_left">${event.data}</span> </li>`
+                let liNode = document.createElement('li')
+                liNode.style.cssText = 'text-align: left'
+                liNode.innerHTML = `<span class="info_left"> ${event.data} </span>`
+                document.getElementById("infoBox").appendChild(liNode)
+                // document.getElementById("output").innerHTML += "robot: <br>" + event.data + "<br>";
+            };
+            // 连接关闭时触发事件
+            socket.onclose = function (event) {
+                console.log("WebSocket 连接已关闭");
+            };
+        }
+        // 发送消息到服务端
+        function sendMessage() {
+            if (socket == null) {
+                alert('未连接')
+                return false
+            }
+            var message = document.getElementById("message").value;
+            if (message === '') {
+                alert('消息不能为空')
+                return false
+            }
+            console.log('socket=', socket)
+            socket.send(message);
+            let liNode = document.createElement('li')
+            liNode.style.cssText = 'text-align: right;position:relative'
+            liNode.innerHTML = `<span class="info_right"> ${message} </span>`
+            document.getElementById("infoBox").appendChild(liNode)
+            // console.log(document.getElementById("infoBox").clientHeight)
+            document.getElementById("message").value = '';
+        }
+        // 关闭 WebSocket 连接
+        function closeConnection() {
+            socket.close();
+        }
+    </script>
+</body>
+
+</html>

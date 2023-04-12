@@ -1,0 +1,6 @@
+*39.pyc
+*.ipc
+*.log.*
+*.log
+.VSCodeCounter
+__pycache__
